@@ -1,11 +1,14 @@
 import io
 import os
+import json
+import re
 
 from google.cloud import speech
 from google.cloud.speech import enums
 from google.cloud.speech import types
 from google.cloud import storage
 
+import markovize
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -31,9 +34,9 @@ def delete_blob(bucket_name, blob_name):
 
 
 clip = {
-    "start": 0,
-    "end": 0,
-    "word": ""
+    'start': 0,
+    'end': 0,
+    'word': ''
 }
 
 if not 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
@@ -50,7 +53,7 @@ bucketname = 'markovid-1'
 
 upload_blob(bucketname, file_name, infile)
 
-audio = types.RecognitionAudio(uri=("gs://" + bucketname + "/" + infile))
+audio = types.RecognitionAudio(uri=('gs://' + bucketname + '/' + infile))
 
 config = types.RecognitionConfig(encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
                                  sample_rate_hertz=16000,
@@ -60,8 +63,8 @@ config = types.RecognitionConfig(encoding=enums.RecognitionConfig.AudioEncoding.
 
 operation = client.long_running_recognize(config, audio)
 
-response = operation.result(timeout=90)
-s = ""
+response = operation.result(timeout=9000)
+s = ''
 
 clist = []
 
@@ -70,17 +73,26 @@ for i, result in enumerate(response.results):
         s += alternative.transcript
 
         for word_info in alternative.words:
-            word = word_info.word
+            word = re.sub(r'[^\w\s]','',word_info.word)
             start_time = word_info.start_time
             end_time = word_info.end_time
-            clist.append({word_info.start_time.seconds + word_info.start_time.nanos * 1e-9,
-                          word_info.end_time.seconds + word_info.end_time.nanos * 1e-9, word_info.word})
-            print('Word: {}, start_time: {}, end_time: {}'.format(
-                word,
-                start_time.seconds + start_time.nanos * 1e-9,
-                end_time.seconds + end_time.nanos * 1e-9))
+            clist.append({'start':start_time.seconds + start_time.nanos * 1e-9, 'end':end_time.seconds + end_time.nanos * 1e-9, 'word':word})
 
-print(s)
 
 delete_blob(bucketname, infile)
 
+# Export clist to json
+
+with open('clist.json', 'w') as outfile:
+    json.dump(clist, outfile)
+
+# Export transcript to txt
+
+with open('transcript.txt', 'w') as outfile:
+    outfile.write(s)
+
+# Call markovize
+
+input("Press any key to markovize")
+
+markovize.run(file_name)

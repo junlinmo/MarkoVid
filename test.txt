@@ -1,0 +1,176 @@
+In this lecture, we're going to introduce raytracing, which is really
+one of the most significant developments in the history of computer graphics.
+
+First, let's consider the effects we need to create realistic
+images. One effect is shadows, and often we want to be able to consider
+the shadows from an area light source or diffuse lighting, in which
+case you get soft shadows with penumbras. We want to be able to handle
+reflections from mirrors and glossy surfaces, we want to be able to
+handle transparency from water and glass and we want to be able to
+handle one surface reflecting on another.
+
+This is an effect known as color bleeding where if you have a white
+surface next to a red ball the white surface will develop a reddish
+tinge because of reflections from the red ball. We'd like complex illumination
+such as what you would find naturally in the outdoors, what you would
+find indoors with many complex light sources as well as realistic
+material, velvets, space, glass. Most of these effects are possible
+but very difficult to do using the OpenGL pipeline that we have
+studied so far.
+
+Raytracing is a different approach to image synthesis as compared to
+the standard rasterization pipeline in OpenGL. We go pixel by pixel
+instead of object by object. If you think about what a rasterizer does
+is it takes each object, determines which pixels in the screen that
+object corresponds to, and then acts accordingly. A raytracer goes
+pixel by pixel, for each pixel, it finds the closest object and shades it
+appropriately.
+
+One of the advantages of raytracing is that it is easy to compute
+things like shadows, transparency, which are very difficult to do in
+OpenGL. There are ways in which you can create shadows, you can create
+reflections, in fact many video games have them. However, they are
+much easier to do in raytracing, and there are many effects in
+raytracing that come for free or are very difficult to create with the
+hardware pipeline.
+
+We'll start with a brief history of raytracing, then we'll talk about
+basic ray casting, how this differs from rasterization. We'll talk
+about shadows and reflections, which are the core algorithm, and ray
+surface intersection. Finally we'll discuss a few
+optimizations. Raytracing goes back more than 40 years, but really the
+landmark paper in this area is by Turner Whitted in 1980, which
+introduced the notion of recursive raytracing. In fact, Homework 3
+will be to develop a recursive raytracer.
+
+Subsequently, there was lots of work on various geometric primitives,
+so you could have general scenes with a variety of different geometric
+objects, as well as lots of works on different acceleration structures
+to make raytracing fast. Raytracing is a historically slow process,
+but in recent years we've seen it come into real time and also have
+graphics hardware support.
+
+Just to say a couple of words about research. Raytracing has now
+entered the mainstream as a real time technique. NVIDIA's OptiX
+includes now a real time raytracer. There has been a lot of work in
+architectures for real time raytracing, and we are seeing more and
+more that raytracing is being used in addition to the standard 
+OpenGL rasterization.
+
+The history of raytracing, or the modern history, begins with the
+seminal paper by Turner Whitted in 1980: An improved illumination
+model for shaded display.
+
+The image shown here is the canonical initial ray tracing image that
+Turner Whitted created. It seems pretty simple with today's
+hindsight. But it contains just a sphere and a checkerboard. The
+important thing is the reflections of the checkerboard in the
+sphere; the refractions of the checkerboard through the bubble. These
+were visual effects that were stunning when they came out in
+1980, when all you'd been used to seeing is standard diffuse and Phong
+shaded images of simple scenes in OpenGL.
+
+These images were rendered at 512 by 512, on the VAX of those days,
+and at that time it took an hour and 14 minutes. Today, in software,
+if you write homework 3 and you write this raytracer, it should be a
+good deal faster than an hour and 14 minutes. If you plug it into the
+NVIDIA OptiX Raytracer, you will actually be able to do this scene in
+real time.
+
+Here's the outline of how ray tracing works. The outline and the code.
+
+We start with high level, this raytrace function. Note the inputs to
+the raytrace function. We have the camera. You have the scene, the
+width, and the height of the image. So these are image width and
+heights. So you create a new image with the appropriate width and
+height, and then you through each pixel. So these loops correspond to
+pixels. Raytracing, remember, goes to each pixel, and figures out what
+it should do at that pixel.
+
+In contrast, rasterization goes to each object and figures out what it
+should do with that object. Re-create the ray through the pixel, find
+where the ray intersects the scene, and then color the hit point. This is a
+very simple algorithm and it doesn't get very much more complicated as
+you add the basic functionality of recursive raytracing. The devil is,
+of course, in the detail but because of the conceptual simplicity of
+a raytracer it's become a very popular manifestation to create 3D
+computer graphics.
+
+The first part of the algorithm we'll discuss is basic ray costing. In
+this case we'll produce essentially the same images that you can do
+with OpenGL. So, just using raycasting to resolve visibility and depth
+instead of rasterization.
+
+The visibility in this case is per pixel. You do one pixel at a time
+instead of using the Z-buffer. You find the nearest object by shooting
+rays into the scene and then you shade it as in openGL.
+
+Let's consider the differences between rasterization and raytracing for
+a moment. So let's call this raytracing, and let's call this
+rasterization.
+
+In raytracing you say you first go over the pixels. And so it's really
+a for loop over the pixels. And then you go over each object.
+
+Now of course you don't a-priori know which objects corresponds to
+which pixels. Therefore you have to loop over all of the
+objects although we'll see later with acceleration structures this can
+be made very much more efficient.
+
+In rasterization, you first go to all of the objects in the scene. And
+then, for each of the objects, you see which pixels you need to
+consider. But you don't need to consider all the pixels, you only need
+to consider those corresponding to the object. So these are the pixels
+which are actually in the object.
+
+Here we see a priori why ray tracing has historically been slow. You
+need to consider all pixels and all objects, so the cost is the number
+of pixels times the number of objects; whereas in rasterization, you
+still pay the cost of the number of objects, but the number of pixels
+is just the number of pixels a given object covers, which could be 10
+or 20. In modern systems, very often, an object may cover less than a
+pixel. So you may just have an object covering 1 or 2 pixels.
+
+Therefore, raytracing has historically been a very slow
+process. However, there are things like acceleration structures, which
+mean that you don't need to consider all of the objects in the
+scene. And in today's complicated scenes, where you may have billions
+of objects, but only millions of pixels, the fact that you can discard
+many of the objects, you may never hit them in the raytracer, can
+actually give you a benefit for visualizing large models over
+rasterization.
+
+Let's now talk about the basic ray casting algorithm. The diagram I've
+shown here includes a virtual viewpoint corresponding to the camera,
+your screen and some objects.
+
+What I'm going to do is trace a ray or cast a ray for visibility from
+the virtual view point and see what objects it hits. In this case the
+ray misses all of the objects; therefore the pixel will be colored
+black. Let's look at what happens at the next pixel.
+
+In this case, the ray hits this object, the cylinder, and therefore it
+will be shaded using the hit point, the color of the object, the
+reflectance properties of the object, the lights and the
+materials. For now, assume it's shaded exactly the same way as in
+homework 2 as is done in OpenGL. So we've assigned a color to that
+pixel.
+
+Consider the next ray. In this case there are 2 hit points. It first
+hits the cylinder, and then it hits the ground.
+
+For multiple intersections you use the closest one to the camera as
+does the z-buffer algorithm in OpenGL, and you shade it
+accordingly. So far the images that you will produce will be exactly
+the same as you will with a rasterizer in OpenGL; however, the
+algorithm is conceptually different because it goes to each pixel,
+shoots a ray, and finds the closest object rather than rasterizing
+objects and maintaining a z-buffer for each pixel.
+
+Let's summarize the comparison to the hardware scan line
+algorithm; also the rasterization algorithm. You evaluate raus per
+pixel. And on the face of this, it is costly. But as we mentioned
+earlier, with good acceleration structures, it can actually give you a
+win for walk-throughs of extremely large models. Perhaps most
+importantly, raytracing enables a number of complex lighting and
+shading effects, which we'll talk about next.
