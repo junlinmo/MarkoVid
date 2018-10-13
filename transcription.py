@@ -44,7 +44,8 @@ if not 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
 
 client = speech.SpeechClient()
 
-infile = input('Enter filename: ')
+infile = input('Enter filename for transcription: ')
+name = infile[:-4]
 
 file_name = os.path.join(os.path.dirname(__file__), 'resources', infile)
 
@@ -83,16 +84,16 @@ delete_blob(bucketname, infile)
 
 # Export clist to json
 
-with open('clist.json', 'w') as outfile:
+with open(name + '_clist.json', 'w') as outfile:
     json.dump(clist, outfile)
 
 # Export transcript to txt
 
-with open('transcript.txt', 'w') as outfile:
+with open(name + '_transcript.txt', 'w') as outfile:
     outfile.write(s)
 
 # Call markovize
 
-input("Press any key to markovize")
+# input("Press any key to Markovize:")
 
-markovize.run(file_name)
+markovize.run(infile)
