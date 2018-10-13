@@ -39,9 +39,9 @@ def run(file_name):
 
     while True:
         sen = text_model.make_sentence()
-        # input(sen)
+        print(sen)
         # Remove punctuation
-        sen = re.sub(r'[^\w\s]','',sen)
+        sen = re.sub(r'[^\w\s]','',sen) if sen != '' else ''
         # Break our sentence into words
         words = sen.split(' ')
         # For each word, find corresponding clip in clist
@@ -60,8 +60,10 @@ def run(file_name):
         # Now iterate over our clips
         for clip in clips:
             ## Add period
+            final = False
             if clip is clips[-1]:
                 clip['word'] += '.'
+                final = True
 
             # Get audio segment
             seg = recording[clip['start']*1000-50:clip['end']*1000+100]
@@ -127,6 +129,8 @@ def run(file_name):
                     break
 
             os.remove(fileName)
+            if final:
+                time.sleep(1)
 
 if __name__ == '__main__':
     run(input("Enter filename for Markovization:"))
