@@ -4,6 +4,31 @@ import os
 from google.cloud import speech
 from google.cloud.speech import enums
 from google.cloud.speech import types
+from google.cloud import storage
+
+
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+    print('File {} uploaded to {}.'.format(
+        source_file_name,
+        destination_blob_name))
+
+def delete_blob(bucket_name, blob_name):
+    """Deletes a blob from the bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    blob.delete()
+
+    print('Blob {} deleted.'.format(blob_name))
+
 
 clip = {
     "start": 0,
@@ -12,7 +37,7 @@ clip = {
 }
 
 if not 'GOOGLE_APPLICATION_CREDENTIALS' in os.environ:
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'D:\\School\\2018\\MHacks11\\MarkoVid\\Markov Chains-06f4fd5f0bf6.json'
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '.\\Markov Chains-06f4fd5f0bf6.json'
 
 client = speech.SpeechClient()
 
@@ -20,9 +45,12 @@ infile = input('Enter filename: ')
 
 file_name = os.path.join(os.path.dirname(__file__), 'resources', infile)
 
-with io.open(file_name, 'rb') as audio_file:
-    content = audio_file.read()
-    audio = types.RecognitionAudio(content=content)
+
+bucketname = 'markovid-1'
+
+upload_blob(bucketname, file_name, infile)
+
+audio = types.RecognitionAudio(uri=("gs://" + bucketname + "/" + infile))
 
 config = types.RecognitionConfig(encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
                                  sample_rate_hertz=16000,
@@ -30,8 +58,9 @@ config = types.RecognitionConfig(encoding=enums.RecognitionConfig.AudioEncoding.
                                  enable_word_time_offsets=True,
                                  enable_automatic_punctuation=True)
 
-response = client.recognize(config, audio)
+operation = client.long_running_recognize(config, audio)
 
+response = operation.result(timeout=90)
 s = ""
 
 clist = []
@@ -52,3 +81,6 @@ for i, result in enumerate(response.results):
                 end_time.seconds + end_time.nanos * 1e-9))
 
 print(s)
+
+delete_blob(bucketname, infile)
+
