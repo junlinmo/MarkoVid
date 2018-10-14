@@ -1,7 +1,9 @@
 import io
+import subprocess
 import os
 import json
 import re
+import time
 
 from google.cloud import speech
 from google.cloud.speech import enums
@@ -49,15 +51,16 @@ name = infile[:-4]
 
 file_name = os.path.join(os.path.dirname(__file__), 'resources', infile)
 
-statinfo = os.stat(file_name)
-if statinfo.st_size > 100000000:
-    print('File too large! The limit is 100MB')
-    exit()
-
+command = 'ffmpeg -i ' + file_name + ' -ab 160k -ac 1 -ar 16000 -vn ' + file_name[:-4] + '.wav'
+print(command)
+command = ['ffmpeg', '-i', file_name, '-ab', '160k', '-ac', '1', '-ar', '16000', '-vn', file_name[:-4], '.wav']
+ 
+res = subprocess.Popen(command, shell=True)
+print(res)
 
 bucketname = 'markovid-1'
 
-upload_blob(bucketname, file_name, infile)
+upload_blob(bucketname, file_name[:-4]+'.wav', infile)
 
 audio = types.RecognitionAudio(uri=('gs://' + bucketname + '/' + infile))
 
