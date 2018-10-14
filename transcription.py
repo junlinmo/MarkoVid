@@ -49,6 +49,11 @@ name = infile[:-4]
 
 file_name = os.path.join(os.path.dirname(__file__), 'resources', infile)
 
+statinfo = os.stat(file_name)
+if statinfo.st_size > 100000000:
+    print('File too large! The limit is 100MB')
+    exit()
+
 
 bucketname = 'markovid-1'
 

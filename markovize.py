@@ -36,27 +36,35 @@ def run(file_name):
     recent_words = []
 
     # Print randomly-generated sentences
-
+    r = input('Do you want to hear a specific word or phrase instead of the Markov Chain? Type option w for own word/phrase or m for the Markov Chain: ')
+    if (r == 'w'):
+            sen = input('Type your word or phrase here: ')
+          
     while True:
-        sen = text_model.make_sentence()
+        if (r != 'w'):
+            sen = text_model.make_sentence()
+            while sen is None:
+                sen = text_model.make_sentence()
         print(sen)
         # Remove punctuation
-        sen = re.sub(r'[^\w\s]','',sen) if sen != '' else ''
+        #sen = re.sub(r'[^\w\s]','',sen) if sen != '' else ''
         # Break our sentence into words
         words = sen.split(' ')
         # For each word, find corresponding clip in clist
         clips = []
-
+        found = False
         for word in words:
             # Shuffle clist
             shuffle(clist)
             for clip in clist:
                 if clip['word'] == word:
+                    found = True
                     clip['start'] = float(clip['start'])
                     clip['end'] = float(clip['end'])
                     clips.append(clip)
                     break   
-
+            if (not found):
+                print(word + ' not found!')
         # Now iterate over our clips
         for clip in clips:
             ## Add period
@@ -131,6 +139,7 @@ def run(file_name):
             os.remove(fileName)
             if final:
                 time.sleep(1)
-
+        if (r == 'w'):
+            sen = input('Type your word or phrase here: ')
 if __name__ == '__main__':
-    run(input("Enter filename for Markovization:"))
+    run(input("Enter filename for Markovization: "))
