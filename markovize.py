@@ -47,7 +47,7 @@ def run(file_name):
                 sen = text_model.make_sentence()
         print(sen)
         # Remove punctuation
-        #sen = re.sub(r'[^\w\s]','',sen) if sen != '' else ''
+        sen = re.sub(r'[^\w\s]','',sen) if sen != '' else ''
         # Break our sentence into words
         words = sen.split(' ')
         # For each word, find corresponding clip in clist
@@ -57,7 +57,7 @@ def run(file_name):
             # Shuffle clist
             shuffle(clist)
             for clip in clist:
-                if clip['word'] == word:
+                if clip['word'] == word or clip['word'].lower() == word.lower():
                     found = True
                     clip['start'] = float(clip['start'])
                     clip['end'] = float(clip['end'])
